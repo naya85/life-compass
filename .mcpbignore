@@ -1,0 +1,8 @@
+/docs/
+/test/
+/scripts/
+/dist/
+/.git/
+/.github/
+*.mcpb
+.DS_Store

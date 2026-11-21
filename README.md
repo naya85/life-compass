@@ -6,12 +6,22 @@ Life Compass guides you from reflection to 1–3 goals to tiny daily habits, the
 
 It's an [MCP](https://modelcontextprotocol.io) server: you add it to an AI app you already use, and your AI becomes the coach. **Your plan is a file on your computer. Nothing is sent anywhere else.**
 
-## What you need
+## Install in one click (Claude Desktop)
+
+1. Download **[life-compass.mcpb](https://github.com/naya85/life-compass/releases/latest/download/life-compass.mcpb)**
+2. Double-click it, or drag it into Claude Desktop (Settings → Extensions), and click **Install**
+3. Start a chat and say **"Start my Life Compass"**
+
+No Node.js or settings needed: Claude Desktop runs it for you.
+
+## Other AI apps
+
+### What you need
 
 - [Node.js](https://nodejs.org) 18 or newer
 - An AI app that supports MCP, for example Claude Desktop, Claude Code, Cursor, or LM Studio (for local models)
 
-## Install
+### Install
 
 ```bash
 git clone https://github.com/naya85/life-compass.git

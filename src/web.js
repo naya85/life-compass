@@ -8,7 +8,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { load, update, today } from './store.js';
-import { status, activeHabits, weekStreak, habitLimit, lowEnergyStreak } from './coach.js';
+import { status, activeHabits, weekStreak, habitLimit, lowEnergyStreak, doneThisPeriod } from './coach.js';
 import { ACTIONS, runAction } from './actions.js';
 import { PHASES, VALUES_CARDS, DEFAULT_AREAS } from './method.js';
 
@@ -45,7 +45,7 @@ export function startWeb({ port = Number(process.env.LIFE_COMPASS_PORT) || 4719 
         if (!okKey(req.headers['x-life-compass-key'])) return send(res, 401, { error: 'missing or wrong key' });
         if (req.method === 'GET' && url.pathname === '/api/state'){
           const plan = await load();
-          const habits = activeHabits(plan).map(h => ({ ...h, weekStreak: weekStreak(plan, h.id), loggedToday: plan.log.some(l => l.habitId === h.id && l.date === today()) }));
+          const habits = activeHabits(plan).map(h => ({ ...h, weekStreak: weekStreak(plan, h.id), loggedToday: plan.log.some(l => l.habitId === h.id && l.date === today()), donePeriod: doneThisPeriod(plan, h) }));
           return send(res, 200, { plan, status: status(plan), habits, today: today(), habitLimit: habitLimit(plan), lowEnergy: plan.goals.length > 0 && lowEnergyStreak(plan) });
         }
         if (req.method === 'GET' && url.pathname === '/api/method'){

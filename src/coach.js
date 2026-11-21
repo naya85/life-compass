@@ -104,3 +104,18 @@ export function weekStreak(plan, habitId, on = today()){
   while (weeks.has(cur)){ n++; const x = new Date(cur + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() - 7); cur = x.toISOString().slice(0, 10); }
   return n;
 }
+
+// Start of the habit's current period: daily = today, weekly = this Monday,
+// fortnightly = every other Monday counted from when the habit started, monthly = the 1st.
+export function periodStart(rhythm, on = today(), started = on){
+  const d = s => new Date(s + 'T00:00:00Z'), iso = x => x.toISOString().slice(0, 10);
+  const monday = s => { const x = d(s); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x; };
+  if (rhythm === 'weekly') return iso(monday(on));
+  if (rhythm === 'fortnightly'){ const a = monday(started), m = monday(on); const weeks = Math.round((m - a) / 6048e5); if (weeks % 2) m.setUTCDate(m.getUTCDate() - 7); return iso(m); }
+  if (rhythm === 'monthly') return on.slice(0, 8) + '01';
+  return on;
+}
+export function doneThisPeriod(plan, h, on = today()){
+  const from = periodStart(h.rhythm, on, h.createdAt || on);
+  return plan.log.some(l => l.habitId === h.id && l.date >= from && l.date <= on);
+}

@@ -30,9 +30,8 @@
   <section class="empty" id="empty" hidden>
     <img class="empty-art" src="assets/mountain/s1.png" alt="">
     <h2 id="emptyTitle">Your Compass is waiting</h2>
-    <p id="emptyText">Answer a few questions about your year. As you go, your plan appears here.</p>
+    <p id="emptyText">Answer a few questions about your life. As you go, your plan appears here.</p>
     <button class="btn big" id="startBtn" type="button">Start reflecting</button>
-    <p class="alt">Or open your AI app and say "Start my Life Compass".</p>
   </section>
 
   <section class="grid" id="grid" hidden>
@@ -45,10 +44,13 @@
         <span class="mtn mtn-front" id="mtnFront" aria-hidden="true"></span>
         <span class="center"><span class="pct" id="pct">0%</span><span class="cap" id="cap">of milestones done</span></span>
       </div>
-      <div class="next" id="next"></div>
     </div>
 
     <div class="cards">
+      <article class="card next-card" id="nextCard" hidden>
+        <div class="card-head"><h2 id="nextTitle">Next step</h2><span class="muted" id="nextMeta"></span></div>
+        <div class="next-body" id="next"></div>
+      </article>
       <article class="card" id="weekCard">
         <div class="card-head"><h2>This week</h2><span class="muted" id="weekMeta"></span></div>
         <div class="tiles" id="tiles"></div>

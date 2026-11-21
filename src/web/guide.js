@@ -43,7 +43,8 @@
   function sliders(names, values){
     const rows = names.map(n => {
       const r = el('input', { type: 'range', min: 1, max: 10, step: 1, 'aria-label': cap(n) }); r.value = values[n] ?? 5;
-      const out = el('output', { text: r.value }); r.addEventListener('input', () => { out.textContent = r.value; });
+      const out = el('output', { text: r.value });
+      const fill = () => { out.textContent = r.value; r.style.setProperty('--p', ((r.value - 1) / 9 * 100) + '%'); }; fill(); r.addEventListener('input', fill);
       return { n, r, node: el('label', { class: 'g-slider' }, el('span', { text: cap(n) }), r, out) };
     });
     return { node: el('div', { class: 'g-sliders' }, ...rows.map(x => x.node)), get: () => Object.fromEntries(rows.map(x => [x.n, Number(x.r.value)])) };
@@ -74,6 +75,7 @@
 
     async function show(){
       const list = visible(); const s = list[i]; if (!s) return close();
+      kicker.textContent = s.kicker || title; sheet.setAttribute('aria-label', kicker.textContent);
       body.textContent = ''; body.classList.remove('in'); void body.offsetWidth; body.classList.add('in');
       cur = await s.build(ctx);
       body.append(el('h2', { class: 'g-q', id: 'g-q', text: typeof s.q === 'function' ? s.q(ctx) : s.q }));
@@ -98,7 +100,7 @@
       busy = false;
       refresh();
       i = Math.min(i + 1, visible().length - 1);
-      if (visible()[i] === s) return close();
+      if (visible()[i] === s){ close(); if (s.then) s.then(ctx); return; }
       show();
     }
     function close(){ bg.remove(); document.body.classList.remove('g-open'); removeEventListener('keydown', onKey, true); open = null; refresh(); if (prevFocus && prevFocus.focus) prevFocus.focus(); }
@@ -128,13 +130,13 @@
     const Q = Object.fromEntries(m.questions.map(q => [q.key, q]));
     const ctx = { plan, picked: (plan.person.values || []).map(v => v.name) };
     const steps = [
-      { key: 'name', q: 'First, what should we call you?', hint: 'Just a first name or nickname. It stays on your computer.',
+      { key: 'name', q: 'First, what should we call you?',
         build: ({ plan }) => { const i = line(plan.person.name, 'Your name'); return { node: i, get: () => i.value }; },
         check: v => v.trim(), save: v => v ? doAction('save_reflection', { name: v }) : null },
       { key: 'proud', q: Q.proud.ask, why: Q.proud.why, ...text('proud', { placeholder: 'Big or small, any part of life' }) },
       { key: 'grateful', q: Q.grateful.ask, why: Q.grateful.why, ...text('grateful') },
       { key: 'hard', q: Q.hard.ask, why: Q.hard.why, ...text('hard') },
-      { key: 'areas', q: 'How is each part of life going, from 1 to 10?', hint: 'A quick gut feeling is enough. You\'ll rate them again each quarter to see what changed.', why: Q.areas.why,
+      { key: 'areas', q: 'How is each part of life going, from 1 to 10?', why: Q.areas.why,
         build: ({ plan }) => { const names = Object.keys(plan.baseline.areas || {}).length ? Object.keys(plan.baseline.areas) : m.areas; return sliders(names, plan.baseline.areas || {}); },
         save: v => doAction('save_baseline', { areas: v }) },
       { key: 'values', q: 'Which values do you want to guide this year?', hint: 'Pick 3 to 5 that feel most like you. Add your own if one is missing.', why: Q.values.why,
@@ -165,26 +167,16 @@
         },
         check: v => { if (v.raw === '' || !(v.hoursPerWeek >= 0 && v.hoursPerWeek <= 80)) throw new Error('Add your hours a week (0 to 80).'); if (!v.energy) throw new Error('Pick your energy from 1 to 10.'); return { hoursPerWeek: v.hoursPerWeek, energy: v.energy }; },
         save: async v => { const d = await doAction('save_capacity', v); ctx.limit = d.habitLimit; } },
-      { key: 'gentle', q: Q.gentle.ask, why: Q.gentle.why, hint: 'Optional. Leave it empty if nothing comes to mind.', optional: true, ...text('gentle', { optional: true }) },
-      { key: 'decision', q: Q.decision.ask, why: Q.decision.why, hint: 'Optional. Add a date and it becomes a decision point on your Compass.', optional: true,
+      { key: 'gentle', q: 'What needs gentleness this year?', why: Q.gentle.why, hint: 'Health, grief, big changes (optional)', optional: true, ...text('gentle', { optional: true }) },
+      { key: 'decision', q: Q.decision.ask, why: Q.decision.why, optional: true,
         build: ({ plan }) => {
           const t = area(plan.reflection?.decision, 'e.g. Whether to change jobs');
           const d = line('', '', 'date');
-          return { node: el('div', { class: 'g-stack' }, t, el('label', { class: 'g-field' }, el('span', { text: 'Decide by (optional)' }), d)), get: () => ({ q: t.value.trim(), date: d.value }) };
+          return { node: el('div', { class: 'g-stack' }, el('label', { class: 'g-field' }, el('span', { text: 'Decision (optional)' }), t), el('label', { class: 'g-field' }, el('span', { text: 'Decide by (optional)' }), d)), get: () => ({ q: t.value.trim(), date: d.value }) };
         },
         save: async ({ q, date }, { plan }) => {
           await doAction('save_reflection', { decision: q });
           if (q && date){ const keep = (plan.decisions || []).filter(x => x.question !== q).map(({ date, question, ifNot }) => ({ date, question, ...(ifNot ? { ifNot } : {}) })); await doAction('save_plan_extras', { decisions: [...keep, { date, question: q }] }); }
-        } },
-      { final: true, q: 'That\'s your picture.', nextLabel: 'Choose a goal',
-        hint: 'Next, choose 1 to 3 goals. You can change any answer later from the + menu.',
-        build: () => {
-          const { plan } = getState(); const a = plan.baseline.areas || {};
-          const low = Object.entries(a).sort((x, y) => x[1] - y[1]).slice(0, 2).map(([k, v]) => `${cap(k)} ${v}/10`).join(', ');
-          return { node: el('ul', { class: 'g-summary' },
-            low ? el('li', {}, el('b', { text: 'Most room to grow' }), el('span', { text: low })) : null,
-            (plan.person.values || []).length ? el('li', {}, el('b', { text: 'Your values' }), el('span', { text: plan.person.values.map(v => v.name).join(', ') })) : null,
-            plan.person.capacity?.energy ? el('li', {}, el('b', { text: 'Room for' }), el('span', { text: `up to ${getState().habitLimit} small habits at once` })) : null) };
         },
         then: () => goal() },
     ];
@@ -193,7 +185,7 @@
     if (!fromStart){
       const r = plan.reflection || {}, c = plan.person.capacity || {};
       const done = { name: !!plan.person.name, proud: !!r.proud, grateful: !!r.grateful, hard: !!r.hard, areas: Object.keys(plan.baseline.areas || {}).length > 0, values: (plan.person.values || []).length > 0, meanings: (plan.person.values || []).length > 0, vision: !!r.vision, capacity: c.energy != null && c.hoursPerWeek != null, gentle: r.gentle != null, decision: r.decision != null };
-      start = steps.findIndex(s => !s.final && !done[s.key]); if (start < 0) start = steps.length - 1;
+      start = steps.findIndex(s => !done[s.key]); if (start < 0) return goal();
     }
     runFlow('Reflect', steps, ctx, start);
   }
@@ -205,7 +197,7 @@
     if (active.length >= 3) return toast('You have 3 goals, the most the method allows. Finish or drop one first.');
     const ctx = { plan, g: {} };
     const steps = [
-      { q: 'Which part of life is this goal for?', hint: 'Lowest-rated first. Pick the one that matters most right now.',
+      { q: 'Which part of life is this goal for?',
         build: () => {
           const a = plan.baseline.areas || {}; const names = Object.keys(a).length ? Object.entries(a).sort((x, y) => x[1] - y[1]).map(([k, v]) => ({ value: k, label: cap(k), sub: `${v}/10 today` })) : ['health', 'career', 'money', 'relationships', 'home', 'hobbies and fun', 'meaning and growth'].map(k => ({ value: k, label: cap(k) }));
           const ch = choice(names); const own = line('', 'Or type another area');
@@ -259,13 +251,16 @@
     runFlow('New goal', steps, ctx);
   }
 
-  function habitSteps(ctx){
+  function habitSteps(ctx){ return habitStepList(ctx).map(st => ({ kicker: 'New habit', ...st })); }
+  function habitStepList(ctx){
     const BARRIERS = [
       { value: 'capability', label: 'I\'m not sure how, or it feels hard', sub: 'Fix: learn one small piece, or make the step even smaller.' },
       { value: 'opportunity', label: 'No time, place or tools', sub: 'Fix: set up the place and tools in advance, or move the cue.' },
       { value: 'motivation', label: 'I won\'t feel like it', sub: 'Fix: pair it with something you enjoy, or do it with someone.' },
     ];
     const h = ctx.h = ctx.h || {};
+    // Decide once, at the start, whether to ask for the low-energy rule (saving it mustn't shift the steps)
+    const hadRule = !!getState().plan.lowEnergyRule;
     return [
       { q: 'Which goal is this habit for?', skip: c => !!c.goalId,
         build: () => { const gs = getState().plan.goals.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.statement, sub: cap(g.area) })); const ch = choice(gs, { value: gs.length === 1 ? gs[0].value : null }); return { node: ch.node, get: ch.get }; },
@@ -311,7 +306,7 @@
           ctx.saved = out;
         } },
       { q: 'When energy runs low for two weeks, what\'s your minimum?', hint: 'Decide now, while you have energy. E.g. "Only the tiny versions, and an early night."',
-        skip: () => !!getState().plan.lowEnergyRule, optional: true,
+        skip: () => hadRule, optional: true,
         build: () => { const t = area('', 'My low-energy rule'); return { node: t, get: () => t.value.trim() }; },
         save: v => v ? doAction('save_plan_extras', { lowEnergyRule: v }) : null },
       { final: true, q: 'Your new habit', nextLabel: 'Done',

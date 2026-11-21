@@ -14,7 +14,7 @@ p.goals = [
     habits: [{ id: 'g2h1', behaviour: 'One outreach message', anchor: 'After lunch on Mondays', tiny: 'open my target list', rhythm: 'weekly', status: 'active', createdAt: d(-30), automaticity: [] }] },
   { id: 'g3', area: 'hobbies and fun', value: 'Adventure', statement: 'Climb a 6a route by the summer', identity: 'I try things before I feel ready', status: 'active', createdAt: d(-20),
     milestones: [{ id: 'g3m1', quarter: 1, text: 'Book a beginners class', done: true }, { id: 'g3m2', quarter: 2, text: 'Climb twice a month', done: false }, { id: 'g3m3', quarter: 3, text: 'Lead a 6a', done: false }],
-    habits: [{ id: 'g3h1', behaviour: 'Stretch for climbing', anchor: 'After I make my morning coffee', tiny: 'one hip stretch', rhythm: 'daily', status: 'active', createdAt: d(-20), automaticity: [] }] },
+    habits: [{ id: 'g3h1', behaviour: 'Stretch for climbing', anchor: 'After I make my morning coffee', tiny: 'do one hip stretch', rhythm: 'daily', status: 'active', createdAt: d(-20), automaticity: [] }] },
 ];
 p.decisions = [{ date: d(9), question: 'Stay or move jobs?', ifNot: 'Start applying', decided: false }];
 p.lowEnergyRule = 'Only the tiny versions, and rest.';

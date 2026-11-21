@@ -124,10 +124,10 @@
     const name = plan.person.name;
     const av = $('avatar'); av.textContent = '';
     if (plan.person.photo){ av.append(el('img', { src: plan.person.photo, alt: '' })); av.classList.add('has-photo'); }
-    else { av.textContent = name ? name.slice(0, 1).toUpperCase() : '✦'; av.classList.remove('has-photo'); }
+    else { av.classList.remove('has-photo'); if (name) av.textContent = name.slice(0, 1).toUpperCase(); else { const s = svg('svg', { viewBox: '0 0 24 24', width: 22, height: 22, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'aria-hidden': 'true' }); s.append(svg('circle', { cx: 12, cy: 8, r: 4 }), svg('path', { d: 'M4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5' })); av.append(s); } }
     $('avMenu').querySelector('[data-remove]').hidden = !plan.person.photo;
-    $('hello').textContent = name ? `Hi, ${name}!` : 'Your Life Compass';
-    $('sub').textContent = new Date(today + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + (plan.goals.length ? ` · ${plan.goals.filter(g => g.status !== 'dropped').length} goals` : '');
+    $('hello').textContent = name ? `${name}'s Compass` : 'Your Life Compass';
+    $('sub').textContent = new Date(today + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + (plan.goals.length ? ` · ${(n => n + (n === 1 ? ' goal' : ' goals'))(plan.goals.filter(g => g.status !== 'dropped').length)}` : '');
     const hasPlan = plan.goals.length > 0;
     $('empty').hidden = hasPlan; $('grid').hidden = !hasPlan;
     // Chips: phase + anything due
@@ -138,7 +138,7 @@
     if (!hasPlan){
       const started = status.phase !== 'reflect' || !!plan.person.name;
       $('emptyTitle').textContent = status.phase === 'choose' ? 'Ready for your first goal' : started ? 'Pick up where you left off' : 'Your Compass is waiting';
-      $('emptyText').textContent = status.phase === 'choose' ? 'Your reflection is saved. Next, choose 1 to 3 goals tied to your values.' : 'Answer a few questions about your year. As you go, your plan appears here.';
+      $('emptyText').textContent = status.phase === 'choose' ? 'Your reflection is saved. Next, choose 1 to 3 goals tied to your values.' : 'Answer a few questions about your life. As you go, your plan appears here.';
       $('startBtn').textContent = status.phase === 'choose' ? 'Choose a goal' : started ? 'Continue' : 'Start reflecting';
       return;
     }
@@ -152,19 +152,31 @@
     const nextM = plan.goals.flatMap(g => (g.milestones || []).map(m => ({ ...m, goal: g }))).filter(m => !m.done).sort((a, b) => a.quarter - b.quarter)[0];
     const next = $('next'); next.textContent = '';
     const nb = NEXT_BY_PHASE[status.phase];
-    if (nb && status.phase !== 'choose'){ const b = el('button', { type: 'button', class: 'btn next-btn', text: nb[0] }); b.addEventListener('click', () => go(nb[1])); next.append(el('small', { text: status.phaseTitle }), b); }
-    else if (nextM) next.append(el('small', { text: 'Next step' }), el('p', { text: nextM.text }));
+    // Next step card: finish setup first, then the earliest open milestone with a way to tick it
+    $('nextMeta').textContent = '';
+    if (nb && status.phase !== 'choose'){
+      $('nextTitle').textContent = status.phaseTitle;
+      const b = el('button', { type: 'button', class: 'btn next-btn', text: nb[0] }); b.addEventListener('click', () => go(nb[1]));
+      next.append(b);
+    } else if (nextM){
+      $('nextTitle').textContent = 'Next step';
+      $('nextMeta').textContent = `Q${nextM.quarter} · ${nextM.goal.area.charAt(0).toUpperCase() + nextM.goal.area.slice(1)}`;
+      const b = el('button', { type: 'button', class: 'btn2 small' }, el('span', { text: 'Mark done' }));
+      b.addEventListener('click', async () => { try { await api('milestone', { milestoneId: nextM.id, done: true }); confetti(b); refresh(); } catch (e) { toast(e.message); } });
+      next.append(el('p', { text: nextM.text }), b);
+    }
+    $('nextCard').hidden = !next.childElementCount;
 
     // Habits
     const tiles = $('tiles'); tiles.textContent = '';
-    $('weekMeta').textContent = habits.length ? `${habits.filter(h => h.loggedToday).length} of ${habits.length} today` : '';
+    $('weekMeta').textContent = habits.length ? `${habits.filter(h => h.donePeriod).length} of ${habits.length} done` : '';
     if (!habits.length){ const b = el('button', { type: 'button', class: 'btn2 small' }, el('span', { text: 'Add a tiny habit' })); b.addEventListener('click', () => go('habit')); tiles.append(el('div', { class: 'empty-row' }, el('p', { class: 'empty-line', text: 'No habits yet.' }), b)); }
     for (const h of habits){
-      const t = el('button', { class: 'tile' + (h.loggedToday ? ' done' : ''), type: 'button', 'aria-pressed': String(h.loggedToday) },
+      const t = el('button', { class: 'tile' + (h.donePeriod ? ' done' : ''), type: 'button', 'aria-pressed': String(h.donePeriod) },
         el('b', { text: h.behaviour }), el('span', { text: recipe(h) }),
-        el('span', { class: 't-foot' }, el('span', { text: `${h.rhythm} · ${h.weekStreak} week${h.weekStreak === 1 ? '' : 's'}` }), el('span', { class: 'check', text: h.loggedToday ? '✓' : '' })));
+        el('span', { class: 't-foot' }, el('span', { text: `${h.rhythm} · ${h.weekStreak} week${h.weekStreak === 1 ? '' : 's'}` }), el('span', { class: 'check', text: h.donePeriod ? '✓' : '' })));
       t.addEventListener('click', async () => {
-        if (h.loggedToday) return toast('Already logged today. Nice.');
+        if (h.donePeriod) return toast({ daily: 'Already done today. Nice.', weekly: 'Already done this week. Nice.', fortnightly: 'Already done this fortnight. Nice.', monthly: 'Already done this month. Nice.' }[h.rhythm] || 'Already done. Nice.');
         try { await api('log', { habitId: h.id, version: 'full' }); confetti(t); refresh(); } catch (e) { toast(e.message); }
       });
       tiles.append(t);

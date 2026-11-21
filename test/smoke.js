@@ -92,4 +92,12 @@ const manyAreas = await call('save_baseline', { areas: Object.fromEntries(Array.
 assert.ok(manyAreas.error); ok('more than 12 areas refused');
 
 await client.close();
+
+{ const { periodStart } = await import('../src/coach.js');
+  assert.equal(periodStart('daily', '2026-11-26'), '2026-11-26');
+  assert.equal(periodStart('weekly', '2026-11-26'), '2026-11-23');
+  assert.equal(periodStart('monthly', '2026-11-26'), '2026-11-01');
+  assert.equal(periodStart('fortnightly', '2026-11-26', '2026-11-16'), '2026-11-16');
+  assert.equal(periodStart('fortnightly', '2026-12-02', '2026-11-16'), '2026-11-30');
+  console.log('  ✓ habit periods: a tick lasts its day, week, fortnight or month'); }
 console.log(`\nAll ${step} checks passed.`);

@@ -76,6 +76,13 @@ export function startWeb({ port = Number(process.env.LIFE_COMPASS_PORT) || 4719 
           });
           return out.isError ? send(res, 404, { error: 'no such milestone' }) : send(res, 200, out);
         }
+        // Profile photo: a small resized image kept in the plan file (or null to remove it)
+        if (url.pathname === '/api/photo'){
+          const d = body.dataUrl;
+          if (d !== null && !(typeof d === 'string' && d.length < 300000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d))) return send(res, 400, { error: 'bad image' });
+          await update(plan => { if (d) plan.person.photo = d; else delete plan.person.photo; return {}; });
+          return send(res, 200, { ok: true });
+        }
         if (url.pathname === '/api/win'){
           const text = String(body.text || '').trim();
           if (!text) return send(res, 400, { error: 'empty' });

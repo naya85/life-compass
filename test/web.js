@@ -43,4 +43,7 @@ const s2 = JSON.parse((await req('/api/state', { headers: { 'x-life-compass-key'
 assert.equal(s2.status.phase, 'reflect'); assert.equal(s2.habitLimit, 3); ok('state reports the phase and habit limit for the guided screens');
 const meth = JSON.parse((await req('/api/method', { headers: { 'x-life-compass-key': key } })).body);
 assert.equal(meth.questions.length, 9); assert.equal(meth.srbai.length, 4); ok('method questions are served to the guided screens');
+const photo = (d) => req('/api/photo', { method: 'POST', headers: { 'x-life-compass-key': key }, body: JSON.stringify({ dataUrl: d }) });
+assert.equal((await photo('javascript:alert(1)')).status, 400); assert.equal((await photo('data:image/svg+xml;base64,PHN2Zz4=')).status, 400); ok('photo refuses anything but a small JPEG, PNG or WebP');
+assert.equal((await photo('data:image/jpeg;base64,/9j/4AAQ')).status, 200); assert.equal((await photo(null)).status, 200); ok('photo can be set and removed');
 await close(); console.log(`\nAll ${n} dashboard checks passed.`);

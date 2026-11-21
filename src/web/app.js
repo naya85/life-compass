@@ -92,9 +92,29 @@
   const menuBtn = $('menuBtn'), menu = $('menu');
   for (const [label, flow, arg] of MENU){ const b = el('button', { type: 'button', role: 'menuitem', text: label }); b.addEventListener('click', () => { closeMenu(); go(flow, arg); }); menu.append(b); }
   function closeMenu(){ menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false'); }
-  menuBtn.addEventListener('click', e => { e.stopPropagation(); const open = menu.hidden; menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('button').focus(); });
+  menuBtn.addEventListener('click', e => { e.stopPropagation(); closeAv(); const open = menu.hidden; menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('button').focus(); });
   document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
   menu.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeMenu(); menuBtn.focus(); } });
+  // Avatar menu: change or remove the photo
+  const avBtn = $('avatar'), avMenu = $('avMenu'), photoIn = $('photoIn');
+  const avItem = (label, fn, attrs = {}) => { const b = el('button', { type: 'button', role: 'menuitem', text: label, ...attrs }); b.addEventListener('click', () => { closeAv(); fn(); }); avMenu.append(b); };
+  function closeAv(){ avMenu.hidden = true; avBtn.setAttribute('aria-expanded', 'false'); }
+  avItem('Change photo', () => photoIn.click());
+  avItem('Remove photo', async () => { try { await api('photo', { dataUrl: null }); lastStamp = ''; refresh(); } catch (e) { toast(e.message); } }, { 'data-remove': '' });
+  avBtn.addEventListener('click', e => { e.stopPropagation(); closeMenu(); const open = avMenu.hidden; avMenu.hidden = !open; avBtn.setAttribute('aria-expanded', String(open)); if (open) avMenu.querySelector('button:not([hidden])').focus(); });
+  document.addEventListener('click', e => { if (!avMenu.hidden && !avMenu.contains(e.target)) closeAv(); });
+  avMenu.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeAv(); avBtn.focus(); } });
+  // Resize to a 192px square (centre crop) so the plan file stays small
+  photoIn.addEventListener('change', async () => {
+    const f = photoIn.files[0]; photoIn.value = ''; if (!f) return;
+    try {
+      const bmp = await createImageBitmap(f); const side = Math.min(bmp.width, bmp.height), S = 192;
+      const cv = document.createElement('canvas'); cv.width = cv.height = S;
+      cv.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, S, S);
+      await api('photo', { dataUrl: cv.toDataURL('image/jpeg', 0.86) }); lastStamp = ''; refresh();
+    } catch { toast('That image could not be used. Try a JPG or PNG.'); }
+  });
+
   $('startBtn').addEventListener('click', () => go(state?.status.phase === 'reflect' ? 'reflect' : state?.status.phase === 'choose' ? 'goal' : 'habit'));
 
   /* ---------- Render ---------- */
@@ -102,7 +122,10 @@
   function render(s){
     state = s; const { plan, status, habits, today } = s;
     const name = plan.person.name;
-    $('avatar').textContent = name ? name.slice(0, 1).toUpperCase() : '✦';
+    const av = $('avatar'); av.textContent = '';
+    if (plan.person.photo){ av.append(el('img', { src: plan.person.photo, alt: '' })); av.classList.add('has-photo'); }
+    else { av.textContent = name ? name.slice(0, 1).toUpperCase() : '✦'; av.classList.remove('has-photo'); }
+    $('avMenu').querySelector('[data-remove]').hidden = !plan.person.photo;
     $('hello').textContent = name ? `Hi, ${name}!` : 'Your Life Compass';
     $('sub').textContent = new Date(today + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + (plan.goals.length ? ` · ${plan.goals.filter(g => g.status !== 'dropped').length} goals` : '');
     const hasPlan = plan.goals.length > 0;
@@ -135,7 +158,7 @@
     // Habits
     const tiles = $('tiles'); tiles.textContent = '';
     $('weekMeta').textContent = habits.length ? `${habits.filter(h => h.loggedToday).length} of ${habits.length} today` : '';
-    if (!habits.length){ const b = el('button', { type: 'button', class: 'link', text: 'Add your first tiny habit' }); b.addEventListener('click', () => go('habit')); tiles.append(el('p', { class: 'empty-line' }, b)); }
+    if (!habits.length){ const b = el('button', { type: 'button', class: 'btn2 small' }, el('span', { text: 'Add a tiny habit' })); b.addEventListener('click', () => go('habit')); tiles.append(el('div', { class: 'empty-row' }, el('p', { class: 'empty-line', text: 'No habits yet.' }), b)); }
     for (const h of habits){
       const t = el('button', { class: 'tile' + (h.loggedToday ? ' done' : ''), type: 'button', 'aria-pressed': String(h.loggedToday) },
         el('b', { text: h.behaviour }), el('span', { text: recipe(h) }),
@@ -183,9 +206,11 @@
     for (const w of [...plan.wins].reverse().slice(0, 8)) wins.append(el('li', {}, el('span', { text: w.text }), el('small', { text: new Date(w.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) })));
   }
 
+  // Add stays disabled until there's something to add
+  $('winText').addEventListener('input', () => { $('winAdd').disabled = !$('winText').value.trim(); });
   $('winForm').addEventListener('submit', async e => {
     e.preventDefault(); const input = $('winText'), text = input.value.trim(); if (!text) return;
-    try { await api('win', { text }); input.value = ''; confetti(e.submitter || input); refresh(); } catch (err) { toast(err.message); }
+    try { await api('win', { text }); input.value = ''; $('winAdd').disabled = true; confetti(e.submitter || input); refresh(); } catch (err) { toast(err.message); }
   });
 
   // Live: re-read every few seconds so changes made through the AI show up

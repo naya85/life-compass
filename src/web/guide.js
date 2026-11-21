@@ -6,6 +6,8 @@
   const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
   const recipe = (anchor, tiny) => { const a = String(anchor || '').trim(); const lead = /^after\b/i.test(a) ? cap(a) : `After I ${a || '…'}`; return `${lead}, I will ${String(tiny || '').trim() || '…'}.`; };
   const need = (v, msg) => { if (v == null || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length)) throw new Error(msg); return typeof v === 'string' ? v.trim() : v; };
+  // Secondary button: white, gradient border and label (one gradient primary per screen)
+  const sec = (label, cls = '') => el('button', { type: 'button', class: ('btn2 ' + cls).trim() }, el('span', { text: label }));
   const doAction = async (name, body) => (await api('do/' + name, body)).data;
   let method = null;
   const getMethod = async () => method || (method = await api('method'));
@@ -55,7 +57,7 @@
     const bar = el('i'), progress = el('div', { class: 'g-progress', 'aria-hidden': 'true' }, bar);
     const kicker = el('small', { class: 'g-kicker', text: title });
     const body = el('div', { class: 'g-body' });
-    const back = el('button', { type: 'button', class: 'g-back', text: 'Back' });
+    const back = sec('Back', 'g-back');
     const next = el('button', { type: 'button', class: 'btn g-next', text: 'Next' });
     const closeBtn = el('button', { type: 'button', class: 'g-close', 'aria-label': 'Close', text: '✕' });
     const sheet = el('div', { class: 'g-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
@@ -64,6 +66,11 @@
     document.body.append(bg); document.body.classList.add('g-open');
     let i = startAt, cur = null, busy = false;
     const visible = () => steps.filter(s => !s.skip || !s.skip(ctx));
+    // Next stays disabled until the step's check passes (run on a copy so it can't change the flow's state)
+    function ready(){ const s = visible()[i]; if (!s || s.final || !s.check || !cur || !cur.get) return true; try { s.check(cur.get(), { ...ctx }); return true; } catch { return false; } }
+    const sync = () => { next.disabled = busy || !ready(); };
+    const later = () => setTimeout(sync, 0);
+    body.addEventListener('input', later); body.addEventListener('change', later); body.addEventListener('click', later);
 
     async function show(){
       const list = visible(); const s = list[i]; if (!s) return close();
@@ -78,6 +85,7 @@
       back.hidden = i === 0 || s.final;
       next.textContent = s.nextLabel || (s.final ? 'Done' : last ? 'Save' : (s.optional ? 'Next' : 'Next'));
       if (s.optional && !s.final) next.textContent = 'Next';
+      sync();
       (body.querySelector('textarea,input:not([type=range]),button.g-choice,.g-scale button') || next).focus({ preventScroll: true });
     }
     async function go(){
@@ -85,9 +93,9 @@
       if (s.final){ close(); if (s.then) s.then(ctx); return; }
       let v;
       try { v = cur.get ? cur.get() : undefined; if (s.check) v = s.check(v, ctx); } catch (e) { return toast(e.message); }
-      busy = true; next.disabled = true;
-      try { if (s.save) await s.save(v, ctx); } catch (e) { busy = false; next.disabled = false; return toast(e.message); }
-      busy = false; next.disabled = false;
+      busy = true; sync();
+      try { if (s.save) await s.save(v, ctx); } catch (e) { busy = false; sync(); return toast(e.message); }
+      busy = false;
       refresh();
       i = Math.min(i + 1, visible().length - 1);
       if (visible()[i] === s) return close();
@@ -133,7 +141,7 @@
         build: c => {
           const opts = [...new Set([...m.values, ...c.picked])].map(v => ({ value: v, label: v }));
           const ch = choice(opts, { multi: true, value: c.picked, max: 5 });
-          const own = line('', 'Add your own value'); own.classList.add('no-enter'); const add = el('button', { type: 'button', class: 'g-mini', text: 'Add' });
+          const own = line('', 'Add your own value'); own.classList.add('no-enter'); const add = sec('Add', 'small');
           const doAdd = () => { const v = cap(own.value.trim()); if (!v) return; if (!opts.some(o => o.value === v)) ch.add({ value: v, label: v }); own.value = ''; own.focus(); };
           add.addEventListener('click', doAdd); own.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); doAdd(); } });
           return { node: el('div', { class: 'g-stack' }, ch.node, el('div', { class: 'g-row' }, own, add)), get: ch.get };
@@ -242,7 +250,7 @@
           const list = el('div', { class: 'g-ms' });
           const row = (q = 1, t = '') => { const s = el('select', { 'aria-label': 'Quarter' }); for (let n = 1; n <= 4; n++){ const o = el('option', { value: n, text: 'Q' + n }); if (n === q) o.selected = true; s.append(o); } const i = line(t, 'A tickable step'); const x = el('button', { type: 'button', class: 'g-x', 'aria-label': 'Remove', text: '✕' }); const r = el('div', { class: 'g-ms-row' }, s, i, x); x.addEventListener('click', () => r.remove()); list.append(r); return i; };
           [1, 1, 2, 3].forEach(q => row(q));
-          const add = el('button', { type: 'button', class: 'g-mini', text: '+ Add a milestone' }); add.addEventListener('click', () => { if (list.children.length >= 10) return toast('10 is plenty.'); row(Math.min(4, list.children.length ? 2 : 1)).focus(); });
+          const add = sec('+ Add a milestone', 'small'); add.addEventListener('click', () => { if (list.children.length >= 10) return toast('10 is plenty.'); row(Math.min(4, list.children.length ? 2 : 1)).focus(); });
           return { node: el('div', { class: 'g-stack' }, list, add), get: () => [...list.children].map(r => ({ quarter: Number(r.querySelector('select').value), text: r.querySelector('input').value.trim() })).filter(m => m.text) };
         },
         check: v => need(v, 'Add at least one milestone.'), save: v => doAction('save_milestones', { goalId: ctx.goalId, milestones: v }) },
@@ -260,7 +268,7 @@
     const h = ctx.h = ctx.h || {};
     return [
       { q: 'Which goal is this habit for?', skip: c => !!c.goalId,
-        build: () => { const gs = getState().plan.goals.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.statement, sub: cap(g.area) })); const ch = choice(gs); return { node: ch.node, get: ch.get }; },
+        build: () => { const gs = getState().plan.goals.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.statement, sub: cap(g.area) })); const ch = choice(gs, { value: gs.length === 1 ? gs[0].value : null }); return { node: ch.node, get: ch.get }; },
         check: v => need(v, 'Pick a goal.'), save: v => { ctx.pickedGoal = v; } },
       { q: 'What\'s one small thing that would move it forward?', hint: 'Something you can do regularly. E.g. "Phone out of the bedroom", "Stretch", "Write 100 words".',
         why: 'Pick behaviours with high impact that are also easy: those are the ones that become habits.',
@@ -353,7 +361,7 @@
     }));
     steps.push({ final: true, q: 'Habit check done', build: () => ({ node: el('ul', { class: 'g-summary' }, ...ctx.results.map(({ h, r }) => {
       const li = el('li', {}, el('b', { text: h.behaviour }), el('span', { text: r.graduate ? `${r.avg} out of 5: it's automatic` : `${r.avg} out of 5: keep going` }));
-      if (r.graduate){ const b = el('button', { type: 'button', class: 'g-mini', text: 'Graduate it' }); b.addEventListener('click', async () => { await doAction('save_habit', { goalId: h.goalId, id: h.id, status: 'graduated' }); b.replaceWith(el('span', { class: 'g-ok', text: 'Graduated' })); confetti(li); refresh(); }); li.append(b); }
+      if (r.graduate){ const b = sec('Graduate it', 'small'); b.addEventListener('click', async () => { await doAction('save_habit', { goalId: h.goalId, id: h.id, status: 'graduated' }); b.replaceWith(el('span', { class: 'g-ok', text: 'Graduated' })); confetti(li); refresh(); }); li.append(b); }
       return li; })) }) });
     runFlow('Habit check', steps, ctx);
   }

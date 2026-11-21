@@ -1,6 +1,6 @@
 // Life Compass dashboard. Reads the local plan through the dashboard server; all text is set with textContent.
 (() => {
-  let key = '', lastStamp = '';
+  let key = '', lastStamp = '', state = null;
   // The private key arrives in the link's # (never sent to the server); keep it for this tab only
   function takeKey(){
     const k = new URLSearchParams(location.hash.slice(1)).get('key');
@@ -83,9 +83,24 @@
       if (alive) requestAnimationFrame(frame); else cv.remove(); })(t0);
   }
 
+  /* ---------- Guided flows (guide.js) ---------- */
+  const go = (name, arg) => window.LCGuide && window.LCGuide[name](arg);
+  const NEXT_BY_PHASE = { reflect: ['Continue reflecting', 'reflect'], choose: ['Choose your first goal', 'goal'], plan: ['Add a tiny habit', 'habit'] };
+  const DUE_FLOW = { 'weekly review': 'weekly', 'monthly habit-strength check': 'monthly', 'quarterly review': 'quarterly', 'lapse replan': 'lapse' };
+  // The + menu
+  const MENU = [['Weekly review', 'weekly'], ['Habit check', 'monthly'], ['Quarterly review', 'quarterly'], ['New goal', 'goal'], ['New habit', 'habit'], ['Reflect again', 'reflect', { fromStart: true }]];
+  const menuBtn = $('menuBtn'), menu = $('menu');
+  for (const [label, flow, arg] of MENU){ const b = el('button', { type: 'button', role: 'menuitem', text: label }); b.addEventListener('click', () => { closeMenu(); go(flow, arg); }); menu.append(b); }
+  function closeMenu(){ menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false'); }
+  menuBtn.addEventListener('click', e => { e.stopPropagation(); const open = menu.hidden; menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('button').focus(); });
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
+  menu.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeMenu(); menuBtn.focus(); } });
+  $('startBtn').addEventListener('click', () => go(state?.status.phase === 'reflect' ? 'reflect' : state?.status.phase === 'choose' ? 'goal' : 'habit'));
+
   /* ---------- Render ---------- */
   const DUE_LABEL = { 'weekly review': 'Weekly review', 'monthly habit-strength check': 'Habit check', 'quarterly review': 'Quarterly review', 'decision': 'Decision', 'lapse replan': 'Restart a habit' };
-  function render({ plan, status, habits, today }){
+  function render(s){
+    state = s; const { plan, status, habits, today } = s;
     const name = plan.person.name;
     $('avatar').textContent = name ? name.slice(0, 1).toUpperCase() : '✦';
     $('hello').textContent = name ? `Hi, ${name}!` : 'Your Life Compass';
@@ -96,7 +111,14 @@
     const chips = $('chips'); chips.textContent = '';
     if (status.phase !== 'act') chips.append(el('span', { class: 'chip', text: status.phaseTitle }));
     for (const d of (status.due || []).slice(0, 2)) chips.append(el('span', { class: 'chip hot', text: DUE_LABEL[d.type] || d.type }));
-    if (!hasPlan) return;
+    menuBtn.hidden = !hasPlan && status.phase === 'reflect' && !plan.person.name;
+    if (!hasPlan){
+      const started = status.phase !== 'reflect' || !!plan.person.name;
+      $('emptyTitle').textContent = status.phase === 'choose' ? 'Ready for your first goal' : started ? 'Pick up where you left off' : 'Your Compass is waiting';
+      $('emptyText').textContent = status.phase === 'choose' ? 'Your reflection is saved. Next, choose 1 to 3 goals tied to your values.' : 'Answer a few questions about your year. As you go, your plan appears here.';
+      $('startBtn').textContent = status.phase === 'choose' ? 'Choose a goal' : started ? 'Continue' : 'Start reflecting';
+      return;
+    }
 
     const all = plan.goals.flatMap(g => g.milestones || []), done = all.filter(m => m.done).length;
     const pct = all.length ? Math.round(100 * done / all.length) : 0;
@@ -106,12 +128,14 @@
     // Next step: first open milestone in the earliest quarter
     const nextM = plan.goals.flatMap(g => (g.milestones || []).map(m => ({ ...m, goal: g }))).filter(m => !m.done).sort((a, b) => a.quarter - b.quarter)[0];
     const next = $('next'); next.textContent = '';
-    if (nextM) next.append(el('small', { text: 'Next step' }), el('p', { text: nextM.text }));
+    const nb = NEXT_BY_PHASE[status.phase];
+    if (nb && status.phase !== 'choose'){ const b = el('button', { type: 'button', class: 'btn next-btn', text: nb[0] }); b.addEventListener('click', () => go(nb[1])); next.append(el('small', { text: status.phaseTitle }), b); }
+    else if (nextM) next.append(el('small', { text: 'Next step' }), el('p', { text: nextM.text }));
 
     // Habits
     const tiles = $('tiles'); tiles.textContent = '';
     $('weekMeta').textContent = habits.length ? `${habits.filter(h => h.loggedToday).length} of ${habits.length} today` : '';
-    if (!habits.length) tiles.append(el('p', { class: 'empty-line', text: 'No habits yet. Plan them with your AI.' }));
+    if (!habits.length){ const b = el('button', { type: 'button', class: 'link', text: 'Add your first tiny habit' }); b.addEventListener('click', () => go('habit')); tiles.append(el('p', { class: 'empty-line' }, b)); }
     for (const h of habits){
       const t = el('button', { class: 'tile' + (h.loggedToday ? ' done' : ''), type: 'button', 'aria-pressed': String(h.loggedToday) },
         el('b', { text: h.behaviour }), el('span', { text: recipe(h) }),
@@ -128,7 +152,13 @@
     const items = [...(status.due || [])];
     for (const d of plan.decisions || []) if (!d.decided && !items.some(x => x.type === 'decision' && x.date === d.date)) items.push({ type: 'decision', why: new Date(d.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), question: d.question });
     if (!items.length) due.append(el('li', {}, el('b', { text: 'All clear' }), el('span', { text: 'Nothing due right now' })));
-    for (const d of items.slice(0, 6)) due.append(el('li', {}, el('b', { text: d.type === 'decision' ? d.question : (DUE_LABEL[d.type] || d.type) + (d.habit ? `: ${d.habit}` : '') }), el('span', { text: d.why || '' })));
+    for (const d of items.slice(0, 6)){
+      const label = d.type === 'decision' ? d.question : (DUE_LABEL[d.type] || d.type) + (d.habit ? `: ${d.habit}` : '');
+      const flow = DUE_FLOW[d.type];
+      const inner = [el('b', { text: label }), el('span', { text: d.why || (flow ? 'Start' : '') })];
+      if (flow){ const b = el('button', { type: 'button', class: 'due-btn' }, ...inner); b.addEventListener('click', () => go(flow, d)); due.append(el('li', {}, b)); }
+      else due.append(el('li', {}, ...inner));
+    }
 
     // Goals
     const goals = $('goals'); goals.textContent = '';
@@ -161,7 +191,8 @@
   // Live: re-read every few seconds so changes made through the AI show up
   async function refresh(){
     try { const s = await api('state'); const stamp = s.plan.updatedAt + s.today; if (stamp !== lastStamp){ lastStamp = stamp; render(s); } }
-    catch (e) { lastStamp = ''; $('grid').hidden = true; $('empty').hidden = false; $('empty').querySelector('p').textContent = e.message; }
+    catch (e) { lastStamp = ''; $('grid').hidden = true; $('empty').hidden = false; $('emptyText').textContent = e.message; $('startBtn').hidden = true; }
   }
+  window.LC = { api, toast, confetti, refresh: () => { lastStamp = ''; return refresh(); }, getState: () => state };
   refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 4000);
 })();

@@ -8,7 +8,9 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { load, update, today } from './store.js';
-import { status, activeHabits, weekStreak } from './coach.js';
+import { status, activeHabits, weekStreak, habitLimit, lowEnergyStreak } from './coach.js';
+import { ACTIONS, runAction } from './actions.js';
+import { PHASES, VALUES_CARDS, DEFAULT_AREAS } from './method.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -44,10 +46,20 @@ export function startWeb({ port = Number(process.env.LIFE_COMPASS_PORT) || 4719 
         if (req.method === 'GET' && url.pathname === '/api/state'){
           const plan = await load();
           const habits = activeHabits(plan).map(h => ({ ...h, weekStreak: weekStreak(plan, h.id), loggedToday: plan.log.some(l => l.habitId === h.id && l.date === today()) }));
-          return send(res, 200, { plan, status: status(plan), habits, today: today() });
+          return send(res, 200, { plan, status: status(plan), habits, today: today(), habitLimit: habitLimit(plan), lowEnergy: plan.goals.length > 0 && lowEnergyStreak(plan) });
+        }
+        if (req.method === 'GET' && url.pathname === '/api/method'){
+          return send(res, 200, { questions: PHASES.reflect.questions, values: VALUES_CARDS, areas: DEFAULT_AREAS, srbai: ['I do it automatically', 'I do it without having to consciously remember', 'I do it without thinking', 'I start it before I realise I\'m doing it'], lapse: PHASES.review.lapse });
         }
         if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
         const body = await readBody(req);
+        // The guided screens: the same actions the AI uses, validated the same way
+        const m = url.pathname.match(/^\/api\/do\/([a-z_]+)$/);
+        if (m){
+          if (!Object.hasOwn(ACTIONS, m[1])) return send(res, 404, { error: 'not found' });
+          const out = await update(plan => { const r = runAction(plan, m[1], body); return r.error ? { isError: true, error: r.error } : r; });
+          return out.isError ? send(res, 400, { error: out.error }) : send(res, 200, out);
+        }
         if (url.pathname === '/api/log'){
           const out = await update(plan => {
             const ok = plan.goals.some(g => (g.habits || []).some(h => h.id === body.habitId));

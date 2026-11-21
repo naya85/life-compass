@@ -61,6 +61,8 @@ Want calendar reminders? Say "export my reminders" and import the `.ics` file it
 
 A visual Compass for your plan: rings for each goal, a mountain that grows with your progress, one-tap habit tiles, what's coming up, goals with milestones, and wins.
 
+**No AI needed.** The dashboard can take you through the whole method on its own: reflect one question at a time, choose goals with WOOP, break them into milestones, build tiny habits with a cue, and do the weekly, monthly and quarterly reviews. Use the **+** button, or **Start reflecting** on a new plan.
+
 ```bash
 npx -y -p life-compass life-compass-ui
 ```

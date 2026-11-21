@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "life-compass",
   "display_name": "Life Compass",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "An evidence-based reflection, goal and habit coach. Your plan stays on your computer.",
-  "long_description": "Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say \"Start my Life Compass\" to begin, and \"open my dashboard\" to see your plan. Everything is saved in a file on your own computer.",
+  "long_description": "Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say \"Start my Life Compass\" to begin, and \"open my dashboard\" to see your plan or use it without the AI. Everything is saved in a file on your own computer.",
   "author": {
     "name": "Life Compass contributors",
     "url": "https://github.com/naya85/life-compass"
@@ -48,6 +48,10 @@
       "description": "Returns the Life Compass method: rules and, for each phase, the questions or steps in order with the reason for each."
     },
     {
+      "name": "values_card_sort",
+      "description": "For people unsure of their values."
+    },
+    {
       "name": "save_reflection",
       "description": "Save answers to Phase 1 questions as the person gives them."
     },
@@ -58,10 +62,6 @@
     {
       "name": "save_capacity",
       "description": "Save realistic hours per week for the plan and current energy from 1 to 10."
-    },
-    {
-      "name": "values_card_sort",
-      "description": "For people unsure of their values."
     },
     {
       "name": "save_values",

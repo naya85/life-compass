@@ -16,7 +16,7 @@ const manifest = {
   display_name: 'Life Compass',
   version: pkg.version,
   description: 'An evidence-based reflection, goal and habit coach. Your plan stays on your computer.',
-  long_description: 'Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say "Start my Life Compass" to begin, and "open my dashboard" to see your plan. Everything is saved in a file on your own computer.',
+  long_description: 'Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say "Start my Life Compass" to begin, and "open my dashboard" to see your plan or use it without the AI. Everything is saved in a file on your own computer.',
   author: { name: 'Life Compass contributors', url: 'https://github.com/naya85/life-compass' },
   repository: { type: 'git', url: 'https://github.com/naya85/life-compass.git' },
   homepage: 'https://github.com/naya85/life-compass',

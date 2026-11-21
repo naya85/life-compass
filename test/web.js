@@ -26,4 +26,21 @@ const big = await req('/api/win', { method: 'POST', headers: { 'x-life-compass-k
 assert.ok(big.status !== 200); ok('request bodies over 1 MB refused');
 const win = await req('/api/win', { method: 'POST', headers: { 'x-life-compass-key': key }, body: JSON.stringify({ text: 'Shipped it' }) });
 assert.equal(win.status, 200); ok('adding a win works');
+// Guided flows: the same actions the AI uses, with the same validation
+const act = async (name, body) => { const r = await req('/api/do/' + name, { method: 'POST', headers: { 'x-life-compass-key': key }, body: JSON.stringify(body) }); return { status: r.status, body: JSON.parse(r.body) }; };
+assert.equal((await req('/api/do/save_goal', { method: 'POST', body: '{}' })).status, 401); ok('guided actions need the key too');
+assert.equal((await act('constructor', {})).status, 404); assert.equal((await act('nope', {})).status, 404); ok('unknown action names refused');
+assert.equal((await act('save_capacity', { hoursPerWeek: 4, energy: 99 })).status, 400); assert.equal((await act('save_reflection', { proud: 'x', extra: 1 })).status, 400); ok('invalid or unexpected fields refused');
+await act('save_reflection', { name: 'Ana', proud: 'Ran a 10k' }); await act('save_capacity', { hoursPerWeek: 3, energy: 5 });
+const g = (await act('save_goal', { area: 'health', value: 'Calm', statement: 'Sleep 7 hours', woop: { wish: 'Sleep', outcome: 'Clear head', obstacle: 'Phone', plan: 'If phone, then hall' } })).body.data;
+await act('save_milestones', { goalId: g.id, milestones: [{ quarter: 1, text: 'Charger in hall' }] });
+const h = (await act('save_habit', { goalId: g.id, behaviour: 'Phone out', anchor: 'brush my teeth', tiny: 'put my phone in the hall', rhythm: 'daily', barrier: 'opportunity' })).body.data;
+assert.equal(h.recipe, 'After I brush my teeth, I will put my phone in the hall.'); ok('a full plan can be built without an AI: reflection, goal, milestones, habit');
+assert.equal((await act('weekly_review', { energy: 6, goodThing: 'Dinner with friends' })).status, 200);
+assert.equal((await act('monthly_check', { habitId: h.id, ratings: [5, 4, 4, 5] })).body.data.graduate, true);
+assert.ok('health' in (await act('quarterly_review', { areas: { health: 6 } })).body.data.change); ok('weekly, monthly and quarterly reviews work from the dashboard');
+const s2 = JSON.parse((await req('/api/state', { headers: { 'x-life-compass-key': key } })).body);
+assert.equal(s2.status.phase, 'reflect'); assert.equal(s2.habitLimit, 3); ok('state reports the phase and habit limit for the guided screens');
+const meth = JSON.parse((await req('/api/method', { headers: { 'x-life-compass-key': key } })).body);
+assert.equal(meth.questions.length, 9); assert.equal(meth.srbai.length, 4); ok('method questions are served to the guided screens');
 await close(); console.log(`\nAll ${n} dashboard checks passed.`);

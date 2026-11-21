@@ -75,5 +75,16 @@ assert.ok(existsSync(rem.data.file) && readFileSync(rem.data.file, 'utf8').inclu
 const plan = JSON.parse(readFileSync(path.join(dir, 'plan.json'), 'utf8'));
 assert.equal(plan.goals.length, 3); assert.equal(plan.log.length, 1); assert.equal(plan.person.values[0].name, 'Growth'); ok(`plan saved locally (${path.join(dir, 'plan.json')})`);
 
+// Security checks
+const { statSync } = await import('node:fs');
+const mode = f => (statSync(f).mode & 0o777).toString(8);
+assert.equal(mode(path.join(dir, 'plan.json')), '600'); assert.equal(mode(dir), '700'); ok('plan file and folder are private (600 / 700)');
+const badDate = await call('log_habit', { habitId: 'g1h1', date: '2026-13-45' });
+assert.ok(badDate.error && badDate.error.includes('Not a real date')); ok('impossible date refused');
+const long = await call('add_win', { text: 'x'.repeat(5000) });
+assert.ok(!long.error); ok('long text accepted (no cap)');
+const manyAreas = await call('save_baseline', { areas: Object.fromEntries(Array.from({ length: 40 }, (_, i) => ['area' + i, 5])) });
+assert.ok(manyAreas.error); ok('more than 12 areas refused');
+
 await client.close();
 console.log(`\nAll ${step} checks passed.`);

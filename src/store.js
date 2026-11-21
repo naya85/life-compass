@@ -7,6 +7,12 @@ import { METHOD_VERSION } from './method.js';
 export const DATA_DIR = process.env.LIFE_COMPASS_DIR || path.join(os.homedir(), '.life-compass');
 export const PLAN_FILE = path.join(DATA_DIR, 'plan.json');
 
+// The plan can hold health and relationship details: keep the folder and files readable only by their owner.
+export async function ensurePrivateDir(){
+  await fs.mkdir(DATA_DIR, { recursive: true, mode: 0o700 });
+  await fs.chmod(DATA_DIR, 0o700);
+}
+
 export function emptyPlan(){
   const now = new Date().toISOString();
   return {
@@ -45,12 +51,13 @@ export async function save(plan){
   plan.updatedAt = new Date().toISOString();
   cache = plan;
   const body = JSON.stringify(plan, null, 2);
-  writing = writing.then(async () => {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    try { await fs.copyFile(PLAN_FILE, PLAN_FILE + '.bak'); } catch {}
+  writing = writing.catch(() => {}).then(async () => {   // one failed write must not block all later ones
+    await ensurePrivateDir();
+    try { await fs.copyFile(PLAN_FILE, PLAN_FILE + '.bak'); await fs.chmod(PLAN_FILE + '.bak', 0o600); } catch {}
     const tmp = PLAN_FILE + '.tmp';
-    await fs.writeFile(tmp, body, 'utf8');
+    await fs.writeFile(tmp, body, { encoding: 'utf8', mode: 0o600 });
     await fs.rename(tmp, PLAN_FILE);
+    await fs.chmod(PLAN_FILE, 0o600);
   });
   await writing;
   return plan;

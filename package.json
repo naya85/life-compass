@@ -3,13 +3,20 @@
   "version": "0.1.0",
   "description": "An evidence-based reflection, goal and habit coach that runs inside your own AI, via MCP. Your plan stays on your computer.",
   "type": "module",
-  "bin": { "life-compass": "src/index.js" },
+  "bin": {
+    "life-compass": "src/index.js"
+  },
   "main": "src/index.js",
-  "scripts": { "start": "node src/index.js", "test": "node test/smoke.js" },
-  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   }
 }

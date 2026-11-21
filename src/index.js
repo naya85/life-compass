@@ -162,7 +162,7 @@ server.registerTool('save_habit', {
   for (const k of ['behaviour', 'anchor', 'tiny', 'full', 'rhythm', 'barrier', 'fix', 'ifThen', 'environment', 'status']) if (a[k] !== undefined) h[k] = a[k];
   const n = activeHabits(plan).length, limit = habitLimit(plan);
   const warn = n > limit ? `Heads up: ${n} active habits, but capacity allows about ${limit}. Suggest pausing one or keeping only the tiny versions.` : '';
-  return reply({ ...h, recipe: `After I ${String(h.anchor).replace(/^after i\s*/i, '')}, I will ${h.tiny}.` }, ['Habit saved.', warn].filter(Boolean).join(' '));
+  return reply({ ...h, recipe: `${/^after\b/i.test(String(h.anchor).trim()) ? String(h.anchor).trim().replace(/^a/, 'A') : 'After I ' + h.anchor}, I will ${h.tiny}.` }, ['Habit saved.', warn].filter(Boolean).join(' '));
 }));
 
 server.registerTool('save_plan_extras', {
@@ -282,6 +282,16 @@ server.registerTool('export_reminders', {
   const file = path.join(DATA_DIR, 'life-compass-reminders.ics');
   await fs.writeFile(file, ics, { encoding: 'utf8', mode: 0o600 });
   return reply({ file }, 'Calendar file written. Open it to add the reminders to your calendar.');
+});
+
+server.registerTool('open_dashboard', {
+  title: 'Open the dashboard',
+  description: 'Starts the visual Life Compass dashboard on this computer (rings, mountain, habits, goals, wins) and returns a private link to open in a browser. It reads the same local plan file and stays up while this app is open.',
+  inputSchema: {},
+}, async () => {
+  const { startWeb } = await import('./web.js');
+  const { url } = await startWeb();
+  return reply({ url }, 'Dashboard is running. Share this private link with the person so they can open it in their browser; it only works on this computer.');
 });
 
 /* ---------- Prompt and resources ---------- */

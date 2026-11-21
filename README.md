@@ -53,6 +53,18 @@ Start a chat and say **"Start my Life Compass"** (or pick the `life_compass` pro
 
 Want calendar reminders? Say "export my reminders" and import the `.ics` file it creates.
 
+## The dashboard
+
+A visual Compass for your plan: rings for each goal, a mountain that grows with your progress, one-tap habit tiles, what's coming up, goals with milestones, and wins.
+
+```bash
+npm run ui
+```
+
+Or ask your AI to "open my dashboard". It runs on your computer only, at a private link with a random key; other websites can't read or change your plan. Changes you make there and through your AI show up in both.
+
+![Dashboard](docs/dashboard.jpg)
+
 ## Where your data lives
 
 `~/.life-compass/plan.json` (change it with the `LIFE_COMPASS_DIR` environment variable). It's plain JSON you can read, back up or delete. A one-step backup is kept as `plan.json.bak`.
@@ -64,8 +76,9 @@ Want calendar reminders? Say "export my reminders" and import the `.ics` file it
 | `src/method.js` | The method: rules, questions and steps, each with the reason it's there |
 | `src/coach.js` | Phase, what's due, capacity limits, habit strength (SRBAI), lapses |
 | `src/store.js` | Local plan file, written safely |
-| `src/index.js` | The MCP server: 20 tools, the `life_compass` prompt, and the method and plan as resources |
-| `test/smoke.js` | An end-to-end test of a whole journey (`npm test`) |
+| `src/index.js` | The MCP server: 21 tools, the `life_compass` prompt, and the method and plan as resources |
+| `src/web.js`, `src/web/` | The local dashboard and its small, key-protected API |
+| `test/` | End-to-end and dashboard security tests (`npm test`) |
 
 ## Not therapy
 

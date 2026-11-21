@@ -4,12 +4,14 @@
   "description": "An evidence-based reflection, goal and habit coach that runs inside your own AI, via MCP. Your plan stays on your computer.",
   "type": "module",
   "bin": {
-    "life-compass": "src/index.js"
+    "life-compass": "src/index.js",
+    "life-compass-ui": "src/ui.js"
   },
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node test/smoke.js"
+    "test": "node test/smoke.js && node test/web.js",
+    "ui": "node src/ui.js"
   },
   "engines": {
     "node": ">=18"

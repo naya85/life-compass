@@ -31,25 +31,22 @@ export function emptyPlan(){
   };
 }
 
-let cache = null;
 let writing = Promise.resolve();
 
+// Always read fresh from disk: the MCP server and the dashboard may both change the plan.
 export async function load(){
-  if (cache) return cache;
   try {
     const raw = await fs.readFile(PLAN_FILE, 'utf8');
-    cache = { ...emptyPlan(), ...JSON.parse(raw) };
+    return { ...emptyPlan(), ...JSON.parse(raw) };
   } catch (e) {
     if (e.code !== 'ENOENT') throw new Error(`Could not read ${PLAN_FILE}: ${e.message}`);
-    cache = emptyPlan();
+    return emptyPlan();
   }
-  return cache;
 }
 
 // Atomic write: temp file then rename, plus a one-step backup, so a crash can't corrupt the plan.
 export async function save(plan){
   plan.updatedAt = new Date().toISOString();
-  cache = plan;
   const body = JSON.stringify(plan, null, 2);
   writing = writing.catch(() => {}).then(async () => {   // one failed write must not block all later ones
     await ensurePrivateDir();
@@ -63,15 +60,18 @@ export async function save(plan){
   return plan;
 }
 
-export async function update(fn){
-  const plan = await load();
-  const out = await fn(plan);
-  await save(plan);
-  return out;
+// Read-modify-write, one at a time within this process
+let queue = Promise.resolve();
+export function update(fn){
+  const run = queue.catch(() => {}).then(async () => {
+    const plan = await load();
+    const out = await fn(plan);
+    if (!(out && out.isError)) await save(plan);
+    return out;
+  });
+  queue = run;
+  return run;
 }
-
-// Only for tests
-export function _reset(){ cache = null; }
 
 export const today = () => new Date().toISOString().slice(0, 10);
 export const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);

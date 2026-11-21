@@ -75,6 +75,11 @@ assert.ok(existsSync(rem.data.file) && readFileSync(rem.data.file, 'utf8').inclu
 const plan = JSON.parse(readFileSync(path.join(dir, 'plan.json'), 'utf8'));
 assert.equal(plan.goals.length, 3); assert.equal(plan.log.length, 1); assert.equal(plan.person.values[0].name, 'Growth'); ok(`plan saved locally (${path.join(dir, 'plan.json')})`);
 
+// Lapse check uses the latest date, not the last entry
+await call('log_habit', { habitId: 'g3h1', date: new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10) });
+s = await call('get_status');
+assert.ok(!s.data.due.some(d => d.type === 'lapse replan' && d.habitId === 'g1h1')); ok('a habit logged today is not flagged as lapsed, even with older entries added later');
+
 // Security checks
 const { statSync } = await import('node:fs');
 const mode = f => (statSync(f).mode & 0o777).toString(8);

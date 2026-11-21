@@ -140,7 +140,7 @@ server.registerTool('save_habit', {
     goalId: text(), id: text().optional().describe('Pass to update an existing habit'),
     behaviour: text().optional(),
     anchor: text().optional().describe('The existing routine it follows, e.g. "After I make my morning coffee"'),
-    tiny: text().optional().describe('A version that takes under two minutes'),
+    tiny: text().optional().describe('What they will do, starting with a verb, small enough to take under two minutes, e.g. "do one hip stretch"'),
     full: text().optional(),
     rhythm: z.enum(['daily', 'weekly', 'fortnightly', 'monthly']).optional(),
     barrier: z.enum(['capability', 'opportunity', 'motivation']).optional(), fix: text().optional(),

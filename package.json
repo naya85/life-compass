@@ -1,6 +1,6 @@
 {
   "name": "life-compass",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An evidence-based reflection, goal and habit coach that runs inside your own AI, via MCP. Your plan stays on your computer.",
   "type": "module",
   "bin": {
@@ -20,5 +20,31 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
     "zod": "4.6.7"
-  }
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE",
+    "icon.png"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naya85/life-compass.git"
+  },
+  "homepage": "https://github.com/naya85/life-compass#readme",
+  "bugs": {
+    "url": "https://github.com/naya85/life-compass/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "habits",
+    "goals",
+    "reflection",
+    "coaching",
+    "behavioural-science",
+    "wellbeing",
+    "claude"
+  ],
+  "author": "Life Compass contributors"
 }

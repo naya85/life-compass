@@ -34,7 +34,8 @@ export function currentPhase(plan){
   return 'act';
 }
 
-function lastOf(list, pred){ const xs = list.filter(pred); return xs.length ? xs.at(-1) : null; }
+// The most recent entry by date (logs can be added for past days, so array order isn't date order)
+function lastOf(list, pred){ let best = null; for (const x of list) if (pred(x) && (!best || x.date >= best.date)) best = x; return best; }
 
 export function dueItems(plan, on = today()){
   const due = [];
@@ -45,7 +46,7 @@ export function dueItems(plan, on = today()){
     for (const h of habits){
       const started = h.createdAt || on;
       const checks = h.automaticity || [];
-      const last = checks.length ? checks.at(-1).date : null;
+      const last = checks.length ? checks.reduce((m, c) => c.date > m ? c.date : m, checks[0].date) : null;
       if (daysBetween(started, on) >= 28 && (!last || daysBetween(last, on) >= 30)) due.push({ type: 'monthly habit-strength check', habitId: h.id, habit: h.behaviour });
       // Lapse: missed for two of its periods
       const period = RHYTHM_DAYS[h.rhythm] || 7;
@@ -91,7 +92,7 @@ export function srbaiResult(ratings){
 
 // Low energy two weekly reviews running → suggest the low-energy rule
 export function lowEnergyStreak(plan){
-  const w = plan.reviews.filter(r => r.type === 'weekly').slice(-2);
+  const w = plan.reviews.filter(r => r.type === 'weekly').sort((a, b) => a.date < b.date ? -1 : 1).slice(-2);
   return w.length === 2 && w.every(r => (r.energy ?? 10) < 5);
 }
 

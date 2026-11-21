@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "life-compass",
   "display_name": "Life Compass",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An evidence-based reflection, goal and habit coach. Your plan stays on your computer.",
   "long_description": "Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say \"Start my Life Compass\" to begin, and \"open my dashboard\" to see your plan. Everything is saved in a file on your own computer.",
   "author": {

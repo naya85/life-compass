@@ -23,20 +23,14 @@ No Node.js or settings needed: Claude Desktop runs it for you.
 
 ### Install
 
-```bash
-git clone https://github.com/naya85/life-compass.git
-cd life-compass
-npm install
-```
-
-Then add it to your AI app. Replace `/path/to/life-compass` with where you cloned it.
+Add it to your AI app. It downloads and runs with `npx`, so there's nothing to clone.
 
 **Claude Desktop**: Settings → Developer → Edit Config, then add:
 
 ```json
 {
   "mcpServers": {
-    "life-compass": { "command": "node", "args": ["/path/to/life-compass/src/index.js"] }
+    "life-compass": { "command": "npx", "args": ["-y", "life-compass"] }
   }
 }
 ```
@@ -44,10 +38,10 @@ Then add it to your AI app. Replace `/path/to/life-compass` with where you clone
 **Claude Code**:
 
 ```bash
-claude mcp add life-compass -- node /path/to/life-compass/src/index.js
+claude mcp add life-compass -- npx -y life-compass
 ```
 
-**Cursor, LM Studio and other MCP apps**: add a server with command `node` and argument `/path/to/life-compass/src/index.js`.
+**Cursor, LM Studio and other MCP apps**: add a server with command `npx` and arguments `-y life-compass`.
 
 Restart the app.
 
@@ -68,7 +62,7 @@ Want calendar reminders? Say "export my reminders" and import the `.ics` file it
 A visual Compass for your plan: rings for each goal, a mountain that grows with your progress, one-tap habit tiles, what's coming up, goals with milestones, and wins.
 
 ```bash
-npm run ui
+npx -y -p life-compass life-compass-ui
 ```
 
 Or ask your AI to "open my dashboard". It runs on your computer only, at a private link with a random key; other websites can't read or change your plan. Changes you make there and through your AI show up in both.

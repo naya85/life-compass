@@ -1,7 +1,15 @@
 // Life Compass dashboard. Reads the local plan through the dashboard server; all text is set with textContent.
 (() => {
-  const key = new URLSearchParams(location.hash.slice(1)).get('key') || sessionStorage.getItem('lc-key') || '';
-  if (key){ try { sessionStorage.setItem('lc-key', key); } catch {} history.replaceState(null, '', location.pathname); }
+  let key = '', lastStamp = '';
+  // The private key arrives in the link's # (never sent to the server); keep it for this tab only
+  function takeKey(){
+    const k = new URLSearchParams(location.hash.slice(1)).get('key');
+    if (k){ key = k; try { sessionStorage.setItem('lc-key', k); } catch {} history.replaceState(null, '', location.pathname); return true; }
+    if (!key){ try { key = sessionStorage.getItem('lc-key') || ''; } catch {} }
+    return false;
+  }
+  takeKey();
+  addEventListener('hashchange', () => { if (takeKey()){ lastStamp = ''; refresh(); } });
   const $ = id => document.getElementById(id);
   const el = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)){ if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v); } for (const c of kids) if (c != null) n.append(c); return n; };
   const NS = 'http://www.w3.org/2000/svg';
@@ -79,7 +87,7 @@
   const DUE_LABEL = { 'weekly review': 'Weekly review', 'monthly habit-strength check': 'Habit check', 'quarterly review': 'Quarterly review', 'decision': 'Decision', 'lapse replan': 'Restart a habit' };
   function render({ plan, status, habits, today }){
     const name = plan.person.name;
-    $('avatar').textContent = (name || 'You').slice(0, 1).toUpperCase();
+    $('avatar').textContent = name ? name.slice(0, 1).toUpperCase() : '✦';
     $('hello').textContent = name ? `Hi, ${name}!` : 'Your Life Compass';
     $('sub').textContent = new Date(today + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + (plan.goals.length ? ` · ${plan.goals.filter(g => g.status !== 'dropped').length} goals` : '');
     const hasPlan = plan.goals.length > 0;
@@ -151,10 +159,9 @@
   });
 
   // Live: re-read every few seconds so changes made through the AI show up
-  let lastStamp = '';
   async function refresh(){
     try { const s = await api('state'); const stamp = s.plan.updatedAt + s.today; if (stamp !== lastStamp){ lastStamp = stamp; render(s); } }
-    catch (e) { $('empty').hidden = false; $('empty').querySelector('p').textContent = e.message; }
+    catch (e) { lastStamp = ''; $('grid').hidden = true; $('empty').hidden = false; $('empty').querySelector('p').textContent = e.message; }
   }
   refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 4000);
 })();

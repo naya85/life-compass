@@ -14,7 +14,7 @@ It's an [MCP](https://modelcontextprotocol.io) server: you add it to an AI app y
 ## Install
 
 ```bash
-git clone <this repo> life-compass
+git clone https://github.com/naya85/life-compass.git
 cd life-compass
 npm install
 ```

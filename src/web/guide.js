@@ -84,8 +84,10 @@
       if (s.why) body.append(el('details', { class: 'g-why' }, el('summary', { text: 'Why this question?' }), el('p', { text: s.why })));
       const last = i === list.length - 1;
       bar.style.transform = `scaleX(${(i + (s.final ? 1 : 0)) / Math.max(1, list.length - 1)})`;
+      progress.hidden = list.length < 2;
       back.hidden = i === 0 || s.final;
       next.textContent = s.nextLabel || (s.final ? 'Done' : last ? 'Save' : (s.optional ? 'Next' : 'Next'));
+      next.classList.toggle('danger', !!s.danger);
       if (s.optional && !s.final) next.textContent = 'Next';
       sync();
       (body.querySelector('textarea,input:not([type=range]),button.g-choice,.g-scale button') || next).focus({ preventScroll: true });
@@ -383,5 +385,52 @@
     ]);
   }
 
-  window.LCGuide = { reflect, goal, habit, weekly, monthly, quarterly, lapse };
+  /* ---------- Edit and delete, available at all times ---------- */
+  function quarterPicker(q){ const s = el('select', { class: 'g-q-pick', 'aria-label': 'Quarter' }); for (let n = 1; n <= 4; n++){ const o = el('option', { value: n, text: 'Q' + n }); if (n === q) o.selected = true; s.append(o); } return s; }
+  function editHabit(h){
+    runFlow('Habit', [{
+      q: 'Edit habit', nextLabel: 'Save',
+      build: () => {
+        const name = line(h.behaviour, 'A short name for the habit');
+        const a = prefixed('After I', String(h.anchor || '').replace(/^after (i )?/i, ''), 'brush my teeth');
+        const t = prefixed('I will', h.tiny, 'put my phone on the hall shelf');
+        const prev = el('p', { class: 'g-recipe', text: recipe(a.input.value, t.input.value) });
+        const upd = () => { prev.textContent = recipe(a.input.value, t.input.value); }; a.input.addEventListener('input', upd); t.input.addEventListener('input', upd);
+        const rh = choice(['daily', 'weekly', 'fortnightly', 'monthly'].map(v => ({ value: v, label: cap(v) })), { value: h.rhythm });
+        return { node: el('div', { class: 'g-stack' }, el('label', { class: 'g-field' }, el('span', { text: 'Habit' }), name), a.node, t.node, prev, el('div', { class: 'g-field' }, el('span', { text: 'How often' }), rh.node)),
+          get: () => ({ behaviour: name.value.trim(), anchor: a.input.value.trim().replace(/^after (i )?/i, ''), tiny: t.input.value.trim().replace(/^i will /i, '').replace(/\.$/, ''), rhythm: rh.get() }) };
+      },
+      check: v => { need(v.behaviour, 'Name the habit.'); need(v.anchor, 'Keep a cue.'); need(v.tiny, 'Keep a tiny version.'); return v; },
+      save: v => doAction('save_habit', { goalId: h.goalId, id: h.id, ...v }),
+    }]);
+  }
+  function editMilestone(m){
+    runFlow('Step', [{
+      q: 'Edit step', nextLabel: 'Save',
+      build: () => { const t = line(m.text, 'A tickable step'); const qp = quarterPicker(m.quarter); return { node: el('div', { class: 'g-ms-row two' }, qp, t), get: () => ({ text: t.value.trim(), quarter: Number(qp.value) }) }; },
+      check: v => { need(v.text, 'Write the step.'); return v; },
+      save: v => doAction('edit_milestone', { milestoneId: m.id, ...v }),
+    }]);
+  }
+  function addMilestone(g){
+    runFlow('Step', [{
+      q: 'Add a step', hint: g.statement, nextLabel: 'Add',
+      build: () => { const t = line('', 'A tickable step'); const qp = quarterPicker(1); return { node: el('div', { class: 'g-ms-row two' }, qp, t), get: () => ({ text: t.value.trim(), quarter: Number(qp.value) }) }; },
+      check: v => { need(v.text, 'Write the step.'); return v; },
+      save: v => doAction('add_milestone', { goalId: g.id, ...v }),
+    }]);
+  }
+  // Deleting asks once; habits are set aside (their history stays), steps are removed
+  function confirmDelete(kind, item){
+    const isHabit = kind === 'habit';
+    runFlow(isHabit ? 'Habit' : 'Step', [{
+      q: isHabit ? `Delete "${item.behaviour}"?` : `Delete "${item.text}"?`,
+      hint: isHabit ? 'It leaves your Compass. Past check-ins stay in your history.' : 'This step will be removed from its goal.',
+      nextLabel: 'Delete', danger: true,
+      build: () => ({ node: null }),
+      save: () => isHabit ? doAction('save_habit', { goalId: item.goalId, id: item.id, status: 'dropped' }) : doAction('delete_milestone', { milestoneId: item.id }),
+    }]);
+  }
+
+  window.LCGuide = { reflect, goal, habit, weekly, monthly, quarterly, lapse, editHabit, editMilestone, addMilestone, confirmDelete };
 })();

@@ -117,6 +117,27 @@
 
   $('startBtn').addEventListener('click', () => go(state?.status.phase === 'reflect' ? 'reflect' : state?.status.phase === 'choose' ? 'goal' : 'habit'));
 
+  /* ---------- "⋯" menus: edit or delete a habit or step from anywhere ---------- */
+  let openPop = null;
+  function closePop(){ if (openPop){ openPop.menu.remove(); openPop.btn.setAttribute('aria-expanded', 'false'); openPop = null; } }
+  function moreBtn(label, items){
+    const b = el('button', { type: 'button', class: 'more', 'aria-label': label, 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, el('span', { 'aria-hidden': 'true', text: '⋯' }));
+    b.addEventListener('click', e => {
+      e.stopPropagation(); const was = openPop && openPop.btn === b; closePop(); closeMenu(); if (was) return;
+      const menu = el('div', { class: 'menu pop', role: 'menu' });
+      for (const [text, fn, cls] of items){ const it = el('button', { type: 'button', role: 'menuitem', text, class: cls || '' }); it.addEventListener('click', () => { closePop(); fn(); }); menu.append(it); }
+      document.body.append(menu);
+      const r = b.getBoundingClientRect(), w = menu.offsetWidth;
+      menu.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.right - w)) + 'px';
+      menu.style.top = (r.bottom + scrollY + 6) + 'px';
+      b.setAttribute('aria-expanded', 'true'); openPop = { menu, btn: b }; menu.querySelector('button').focus({ preventScroll: true });
+      menu.addEventListener('keydown', ev => { if (ev.key === 'Escape'){ closePop(); b.focus(); } });
+    });
+    return b;
+  }
+  document.addEventListener('click', e => { if (openPop && !openPop.menu.contains(e.target)) closePop(); });
+  addEventListener('scroll', closePop, { passive: true });
+
   /* ---------- Render ---------- */
   const DUE_LABEL = { 'weekly review': 'Weekly review', 'monthly habit-strength check': 'Habit check', 'quarterly review': 'Quarterly review', 'decision': 'Decision', 'lapse replan': 'Restart a habit' };
   function render(s){
@@ -163,7 +184,8 @@
       $('nextMeta').textContent = `Q${nextM.quarter} · ${nextM.goal.area.charAt(0).toUpperCase() + nextM.goal.area.slice(1)}`;
       const b = el('button', { type: 'button', class: 'btn2 small' }, el('span', { text: 'Mark done' }));
       b.addEventListener('click', async () => { try { await api('milestone', { milestoneId: nextM.id, done: true }); confetti(b); refresh(); } catch (e) { toast(e.message); } });
-      next.append(el('p', { text: nextM.text }), b);
+      next.append(el('p', { text: nextM.text }), el('div', { class: 'next-actions' }, b,
+        moreBtn('More for this step', [['Edit step', () => go('editMilestone', nextM)], ['Delete step', () => window.LCGuide.confirmDelete('milestone', nextM), 'danger']])));
     }
     $('nextCard').hidden = !next.childElementCount;
 
@@ -179,7 +201,8 @@
         if (h.donePeriod) return toast({ daily: 'Already done today. Nice.', weekly: 'Already done this week. Nice.', fortnightly: 'Already done this fortnight. Nice.', monthly: 'Already done this month. Nice.' }[h.rhythm] || 'Already done. Nice.');
         try { await api('log', { habitId: h.id, version: 'full' }); confetti(t); refresh(); } catch (e) { toast(e.message); }
       });
-      tiles.append(t);
+      const hm = { ...h, goalId: h.goalId };
+      tiles.append(el('div', { class: 'tile-wrap' }, t, moreBtn('More for ' + h.behaviour, [['Edit habit', () => go('editHabit', hm)], ['Delete habit', () => window.LCGuide.confirmDelete('habit', hm), 'danger']])));
     }
 
     // Due
@@ -206,10 +229,12 @@
       for (const m of [...ms].sort((a, b) => a.quarter - b.quarter)){
         const cb = el('input', { type: 'checkbox', 'aria-label': m.text }); cb.checked = m.done;
         cb.addEventListener('change', async () => { try { await api('milestone', { milestoneId: m.id, done: cb.checked }); if (cb.checked) confetti(cb); refresh(); } catch (e) { toast(e.message); cb.checked = !cb.checked; } });
-        list.append(el('li', {}, el('label', {}, cb, el('span', { class: m.done ? 'done-t' : '' }, el('em', { text: 'Q' + m.quarter }), document.createTextNode(m.text)))));
+        list.append(el('li', {}, el('label', {}, cb, el('span', { class: m.done ? 'done-t' : '' }, el('em', { text: 'Q' + m.quarter }), document.createTextNode(m.text))),
+          moreBtn('More for ' + m.text, [['Edit step', () => go('editMilestone', m)], ['Delete step', () => window.LCGuide.confirmDelete('milestone', m), 'danger']])));
       }
+      const addStep = el('button', { type: 'button', class: 'link add-step', text: '+ Add step' }); addStep.addEventListener('click', () => go('addMilestone', g));
       goals.append(el('div', { class: 'goal' }, el('div', { class: 'goal-top' }, dot, el('span', { class: 'goal-area', text: `${g.area.charAt(0).toUpperCase() + g.area.slice(1)} · ${g.value}` })),
-        el('h3', { text: g.statement }), g.identity ? el('p', { class: 'identity', text: `"${g.identity}"` }) : null, bar, list));
+        el('h3', { text: g.statement }), g.identity ? el('p', { class: 'identity', text: `"${g.identity}"` }) : null, bar, list, addStep));
     });
 
     // Wins

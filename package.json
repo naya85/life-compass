@@ -1,6 +1,6 @@
 {
   "name": "life-compass",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "An evidence-based reflection, goal and habit coach that runs inside your own AI, via MCP. Your plan stays on your computer.",
   "type": "module",
   "bin": {

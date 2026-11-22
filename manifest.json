@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "life-compass",
   "display_name": "Life Compass",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "An evidence-based reflection, goal and habit coach. Your plan stays on your computer.",
   "long_description": "Life Compass guides you from reflection to 1 to 3 goals to tiny daily habits, then keeps you going with short weekly, monthly and quarterly reviews. It is grounded in behavioural science: values work, goal setting, WOOP, implementation intentions, tiny habits, COM-B and habit-strength tracking. Say \"Start my Life Compass\" to begin, and \"open my dashboard\" to see your plan or use it without the AI. Everything is saved in a file on your own computer.",
   "author": {
@@ -74,6 +74,18 @@
     {
       "name": "save_milestones",
       "description": "Set a goal's milestones: 4 to 8 concrete, tickable actions spread across quarters 1–4, most in the first two."
+    },
+    {
+      "name": "add_milestone",
+      "description": "Add one milestone to a goal, keeping the others and their ticks."
+    },
+    {
+      "name": "edit_milestone",
+      "description": "Change one milestone's text or quarter."
+    },
+    {
+      "name": "delete_milestone",
+      "description": "Remove one milestone from its goal."
     },
     {
       "name": "save_habit",

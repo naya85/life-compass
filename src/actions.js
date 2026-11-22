@@ -92,6 +92,42 @@ export const ACTIONS = {
       return ok(g.milestones, 'Milestones saved.');
     },
   },
+  add_milestone: {
+    title: 'Add a milestone',
+    description: 'Add one milestone to a goal, keeping the others and their ticks.',
+    input: { goalId: text(), quarter: z.number().int().min(1).max(4), text: text() },
+    run(plan, { goalId, quarter, text }){
+      const g = findGoal(plan, goalId); if (!g) return err(`No goal ${goalId}.`);
+      if (!text.trim()) return err('A milestone needs some text.');
+      g.milestones = g.milestones || [];
+      const n = Math.max(0, ...g.milestones.map(m => Number(String(m.id).split('m').pop()) || 0)) + 1;
+      const m = { id: `${g.id}m${n}`, quarter, text: text.trim(), done: false };
+      g.milestones.push(m);
+      return ok(m, 'Milestone added.');
+    },
+  },
+  edit_milestone: {
+    title: 'Edit a milestone',
+    description: 'Change one milestone\'s text or quarter. Its tick is kept.',
+    input: { milestoneId: text(), text: text().optional(), quarter: z.number().int().min(1).max(4).optional() },
+    run(plan, { milestoneId, text, quarter }){
+      for (const g of plan.goals){ const m = (g.milestones || []).find(x => x.id === milestoneId); if (m){
+        if (text !== undefined){ if (!text.trim()) return err('A milestone needs some text.'); m.text = text.trim(); }
+        if (quarter !== undefined) m.quarter = quarter;
+        return ok(m, 'Milestone updated.');
+      } }
+      return err(`No milestone ${milestoneId}.`);
+    },
+  },
+  delete_milestone: {
+    title: 'Delete a milestone',
+    description: 'Remove one milestone from its goal. Only after the person asks.',
+    input: { milestoneId: text() },
+    run(plan, { milestoneId }){
+      for (const g of plan.goals){ const i = (g.milestones || []).findIndex(x => x.id === milestoneId); if (i >= 0){ g.milestones.splice(i, 1); return ok({ goalId: g.id }, 'Milestone deleted.'); } }
+      return err(`No milestone ${milestoneId}.`);
+    },
+  },
   save_habit: {
     title: 'Save a habit',
     description: 'Create or update a tiny habit for a goal: a recipe ("After I [anchor], I will [tiny]"), its rhythm, the COM-B barrier and fix, if-then plans for obstacles and one environment change. Also use it to shrink, pause, graduate or drop a habit (status). Warns when active habits exceed what capacity allows.',
